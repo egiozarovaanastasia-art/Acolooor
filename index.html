@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Палитра Настроения</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body { 
+    font-family: 'Montserrat', sans-serif;
+    background-color: #fafafa;
+    color: #222;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  header {
+    width: 100%;
+    padding: 40px 20px 20px;
+    text-align: center;
+  }
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .subtitle {
+    color: #777;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  main {
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+  }
+
+  /* Кнопки */
+  .controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    background: #222;
+    color: #fff;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+  .btn:active { transform: translateY(0); }
+  
+  .btn.outline {
+    background: transparent;
+    color: #222;
+    border: 2px solid #222;
+  }
+  .btn.outline:hover { background: #222; color: #fff; }
+
+  /* Цветовые блоки */
+  .colors-wrapper {
+    display: flex;
+    width: 100%;
+    height: 400px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+    background: #eee;
+  }
+  
+  .color-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 30px;
+    cursor: pointer;
+    transition: flex 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+  }
+  .color-block:hover { flex: 1.5; }
+  
+  .color-code {
+    background: rgba(255,255,255,0.9);
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #333;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .color-block:hover .color-code { opacity: 1; transform: translateY(0); }
+
+  /* Анимация */
+  .fade-in { animation: fadeIn 0.5s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Уведомление */
+  #toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: #222; color: #fff; padding: 12px 25px; border-radius: 50px;
+    font-weight: 700; transition: transform 0.3s ease; opacity: 0; pointer-events: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 100;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Состояние загрузки */
+  .loading-text { color: #888; font-size: 1.2rem; font-weight: 700; }
+
+  /* Адаптив */
+  @media (max-width: 768px) {
+    h1 { font-size: 1.8rem; }
+    .colors-wrapper { flex-direction: column; height: auto; }
+    .color-block { height: 100px; flex-direction: row; justify-content: center; align-items: center; padding: 0; }
+    .color-block:hover { flex: 1; }
+    .color-code { opacity: 1; transform: translateY(0); } 
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Палитра Настроения</h1>
+  <p class="subtitle">Нажми кнопку, чтобы получить случайную палитру из твоей коллекции. Кликни по цвету, чтобы скопировать код.</p>
+</header>
+
+<main>
+  <div class="controls">
+    <button class="btn" onclick="generatePalette()">🎲 Сгенерировать</button>
+    <button class="btn outline" onclick="copyAllColors()">📋 Скопировать все</button>
+  </div>
+
+  <div class="colors-wrapper" id="colors-wrapper">
+    <div class="loading-text" style="width:100%; text-align:center; margin-top: 150px;">Загрузка палитр...</div>
+  </div>
+</main>
+
+<div id="toast">Скопировано!</div>
+
+<script>
+// =========================================================
+// ССЫЛКА НА ТВОЮ ТАБЛИЦУ (Уже преобразована в CSV)
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1xlfaY1pQRfOWNhl0zKyqHHnM1CSDcfKO_x7HnNkp2Dw/export?format=csv";
+// =========================================================
+
+let allPalettes = [];
+
+async function loadData() {
+  try {
+    const response = await fetch(CSV_URL);
+    const csvText = await response.text();
+    const rows = parseCSV(csvText);
+
+    if (rows.length < 2) {
+      document.getElementById('colors-wrapper').innerHTML = "<div class='loading-text' style='width:100%; text-align:center; margin-top: 150px;'>В таблице нет данных.</div>";
+      return;
+    }
+
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const idxC1 = headers.indexOf('цвет 1');
+    const idxC2 = headers.indexOf('цвет 2');
+    const idxC3 = headers.indexOf('цвет 3');
+    const idxC4 = headers.indexOf('цвет 4');
+    const idxC5 = headers.indexOf('цвет 5');
+
+    // Собираем палитры из строк
+    allPalettes = rows.slice(1)
+      .filter(row => row[idxC1])
+      .map(row => {
+        const colors = [];
+        if(row[idxC1]) colors.push(row[idxC1].trim());
+        if(row[idxC2]) colors.push(row[idxC2].trim());
+        if(row[idxC3]) colors.push(row[idxC3].trim());
+        if(row[idxC4]) colors.push(row[idxC4].trim());
+        if(row[idxC5]) colors.push(row[idxC5].trim());
+        return colors;
+      });
+
+    // Сразу генерируем первую палитру
+    generatePalette();
+
+  } catch (error) {
+    document.getElementById('colors-wrapper').innerHTML = "<div class='loading-text' style='width:100%; text-align:center; margin-top: 150px; color:red;'>Ошибка загрузки. Проверьте доступ к таблице.</div>";
+  }
+}
+
+// Парсер CSV
+function parseCSV(text) {
+  const rows = []; let row = []; let field = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i+1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQuotes = false;
+      else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c !== '\r') field += c;
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// Отрисовка палитры
+function generatePalette() {
+  if (allPalettes.length === 0) return;
+
+  const wrapper = document.getElementById('colors-wrapper');
+  wrapper.innerHTML = '';
+  wrapper.classList.remove('fade-in');
+  void wrapper.offsetWidth; 
+  wrapper.classList.add('fade-in');
+
+  // Выбираем случайную палитру из загруженных
+  const randomPalette = allPalettes[Math.floor(Math.random() * allPalettes.length)];
+
+  randomPalette.forEach(color => {
+    // Определяем контраст текста (черный или белый)
+    const hex = color.replace('#', '');
+    // Если код цвета короче 6 символов, ставим дефолтный
+    if(hex.length < 6) return; 
+
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    
+    const codeBg = (yiq >= 128) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)';
+    const codeText = (yiq >= 128) ? '#000' : '#fff';
+
+    const block = document.createElement('div');
+    block.className = 'color-block';
+    block.style.backgroundColor = color;
+    block.innerHTML = `<div class="color-code" style="color: ${codeText}; background: ${codeBg};">${color}</div>`;
+    
+    block.onclick = () => {
+      navigator.clipboard.writeText(color);
+      showToast(`Цвет ${color} скопирован!`);
+    };
+
+    wrapper.appendChild(block);
+  });
+}
+
+// Копировать все цвета
+function copyAllColors() {
+  const blocks = document.querySelectorAll('.color-code');
+  if (blocks.length === 0) return;
+  
+  let allColors = [];
+  blocks.forEach(block => allColors.push(block.innerText));
+  const textToCopy = allColors.join(', ');
+  
+  navigator.clipboard.writeText(textToCopy);
+  showToast('Все цвета скопированы!');
+}
+
+// Уведомление
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.innerText = message;
+  toast.classList.add('show');
+  setTimeout(() => { toast.classList.remove('show'); }, 2500);
+}
+
+// Запуск
+loadData();
+</script>
+</body>
+  </html>
